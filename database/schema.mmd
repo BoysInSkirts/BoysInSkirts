@@ -13,6 +13,7 @@ erDiagram
         varchar Title
         varchar Slug
         longtext Content
+        int AuthorID FK
     }
     model {
         int ID PK
@@ -21,8 +22,10 @@ erDiagram
         enum Category
     }
     model_meta {
-        int ModelID "PK,FK"
-        json OtherAttributes
+        int ID PK
+        int ModelID FK
+        varchar MetaKey
+        longtext MetaValue
     }
     skirt_pattern {
         int ID PK
@@ -35,15 +38,31 @@ erDiagram
         varchar Password
     }
     page_field {
-        int PageID
-        int FieldID
+        int ID PK
+        int PageID FK
+        int FieldID FK
         varchar FieldName
         varchar FieldHandle
         enum FieldType    
         %% plain_text, rich_text, link, assets
-        longtext Content
+    }
+    page_field_meta {
+        int ID PK
+        int PFID FK
+        varchar MetaKey
+        longtext MetaValue
+    }
+    page_meta {
+        int ID PK
+        int PageID FK
+        varchar MetaKey
+        longtext MetaValue
     }
 
+    model ||--o{ model_meta : ""
     model ||--|| model_meta : "1-1"
     page ||--o{ page_field : ""
     field ||--o{ page_field : ""
+    page ||--o| user : "author"
+    page ||--o{ page_meta : ""
+    page_field ||--o{ page_field_meta : ""
