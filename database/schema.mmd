@@ -1,0 +1,67 @@
+erDiagram
+    FIELD {
+        int ID PK
+        int ParentID
+        varchar Name
+        varchar Handle
+        longtext Content
+        datetime CreatedAt
+        int CreatedBy
+        datetime UpdatedAt
+        int UpdatedBy
+        boolean Disabled
+    }
+    PAGE {
+        int ID PK
+        varchar Title
+        varchar Slug
+        longtext Content
+        datetime CreatedAt
+        int CreatedBy
+        datetime UpdatedAt
+        int UpdatedBy
+        boolean Disabled
+    }
+    MODEL {
+        int ID PK
+        varchar Name
+        varchar FilePath
+        enum Category
+        datetime CreatedAt
+        int CreatedBy
+        datetime UpdatedAt
+        int UpdatedBy
+        boolean Disabled
+    }
+    MODEL_METADATA {
+        int ModelID "PK,FK"
+        json OtherAttributes
+        datetime CreatedAt
+        int CreatedBy
+        datetime UpdatedAt
+        int UpdatedBy
+        boolean Disabled
+    }
+    SKIRT_PATTERN {
+        int ID PK
+        json Attribute
+        datetime CreatedAt
+        int CreatedBy
+        datetime UpdatedAt
+        int UpdatedBy
+        boolean Disabled
+    }
+    USER {
+        int ID PK
+        varchar Username
+        varchar Email
+        varchar Password
+        datetime CreatedAt
+        int CreatedBy
+        datetime UpdatedAt
+        int UpdatedBy
+        boolean Disabled
+    }
+
+    FIELD ||--o| FIELD : ParentID
+    MODEL ||--|| MODEL_METADATA : "1-1"
