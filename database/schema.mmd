@@ -1,67 +1,49 @@
 erDiagram
-    FIELD {
+    field {
         int ID PK
         int ParentID
         varchar Name
         varchar Handle
-        longtext Content
-        datetime CreatedAt
-        int CreatedBy
-        datetime UpdatedAt
-        int UpdatedBy
-        boolean Disabled
+        enum Type         
+        %%  plain_text, rich_text, link, assets
+        longtext Description
     }
-    PAGE {
+    page {
         int ID PK
         varchar Title
         varchar Slug
         longtext Content
-        datetime CreatedAt
-        int CreatedBy
-        datetime UpdatedAt
-        int UpdatedBy
-        boolean Disabled
     }
-    MODEL {
+    model {
         int ID PK
         varchar Name
         varchar FilePath
         enum Category
-        datetime CreatedAt
-        int CreatedBy
-        datetime UpdatedAt
-        int UpdatedBy
-        boolean Disabled
     }
-    MODEL_METADATA {
+    model_meta {
         int ModelID "PK,FK"
         json OtherAttributes
-        datetime CreatedAt
-        int CreatedBy
-        datetime UpdatedAt
-        int UpdatedBy
-        boolean Disabled
     }
-    SKIRT_PATTERN {
+    skirt_pattern {
         int ID PK
         json Attribute
-        datetime CreatedAt
-        int CreatedBy
-        datetime UpdatedAt
-        int UpdatedBy
-        boolean Disabled
     }
-    USER {
+    user {
         int ID PK
         varchar Username
         varchar Email
         varchar Password
-        datetime CreatedAt
-        int CreatedBy
-        datetime UpdatedAt
-        int UpdatedBy
-        boolean Disabled
+    }
+    page_field {
+        int PageID
+        int FieldID
+        varchar FieldName
+        varchar FieldHandle
+        enum FieldType    
+        %% plain_text, rich_text, link, assets
+        longtext Content
     }
 
-    FIELD ||--o| FIELD : ParentID
-    MODEL ||--|| MODEL_METADATA : "1-1"
+    model ||--|| model_meta : "1-1"
+    page ||--o{ page_field : ""
+    field ||--o{ page_field : ""
