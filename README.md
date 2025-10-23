@@ -243,6 +243,20 @@ Compliance: design with GDPR/CCPA considerations — DSAR handling process if us
 - CI/CD: GitHub Actions — build, test, push images, deploy to staging then production with controlled rollout.
 - Backups: DB daily, assets replicated.
 
+### Assigned Domains
+
+**Staging:**
+
+- <dev-bis-cms.boysinskirts.org>: Staging CMS
+- <dev-bis-mgt.boysinskirts.org>: Staging Admin
+- <dev-bis-www.boysinskirts.org>: Staging Public Website
+
+**Production:**
+
+- <prd-bis-cms.boysinskirts.org>: Production CMS
+- <prd-bis-mgt.boysinskirts.org>: Production Admin
+- <www.boysinskirts.org>: Production Public Website
+
 ## 15. Roadmap & milestones
 
 Phase 0 — Discovery & prototyping (2–4 weeks)
