@@ -7,6 +7,8 @@ erDiagram
         enum Type         
         %%  plain_text, rich_text, link, assets
         longtext Description
+        datetime CreatedAt
+        datetime UpdatedAt
     }
     page {
         int ID PK
@@ -14,12 +16,22 @@ erDiagram
         varchar Slug
         longtext Content
         int AuthorID FK
+        enum Status
+        %% draft, published, archived
+        varchar Template
+        datetime PublishedAt
+        datetime CreatedAt
+        datetime UpdatedAt
     }
     model {
         int ID PK
         varchar Name
         varchar FilePath
         enum Category
+        %% human_model, skirt_asset
+        int PreviewImageID FK
+        datetime CreatedAt
+        datetime UpdatedAt
     }
     model_meta {
         int ID PK
@@ -27,15 +39,17 @@ erDiagram
         varchar MetaKey
         longtext MetaValue
     }
-    skirt_pattern {
-        int ID PK
-        json Attribute
-    }
     user {
         int ID PK
         varchar Username
         varchar Email
         varchar Password
+        enum Role
+        %% admin, editor
+        boolean IsActive
+        datetime CreatedAt
+        datetime UpdatedAt
+        datetime LastLoginAt
     }
     page_field {
         int ID PK
@@ -58,11 +72,45 @@ erDiagram
         varchar MetaKey
         longtext MetaValue
     }
+    file {
+        int ID PK
+        varchar Name
+        varchar FilePath
+        varchar MimeType
+        int Size
+        int Width
+        int Height
+        varchar AltText
+        int UploadedBy FK
+        datetime CreatedAt
+    }
+    analytics_session {
+        int ID PK
+        varchar SessionID
+        varchar AnonymousID
+        datetime StartedAt
+        datetime LastActiveAt
+        varchar UserAgent
+        varchar Country
+        boolean ConsentGiven
+    }
+    analytics_event {
+        int ID PK
+        int SessionID FK
+        varchar EventType
+        %% page_view, vt_interaction, model_switch, skirt_switch
+        varchar PagePath
+        varchar PageTitle
+        json EventData
+        datetime CreatedAt
+    }
 
     model ||--o{ model_meta : ""
-    model ||--|| model_meta : "1-1"
+    model ||--o| file : "preview"
     page ||--o{ page_field : ""
     field ||--o{ page_field : ""
     page ||--o| user : "author"
     page ||--o{ page_meta : ""
     page_field ||--o{ page_field_meta : ""
+    file ||--o| user : "uploader"
+    analytics_session ||--o{ analytics_event : ""

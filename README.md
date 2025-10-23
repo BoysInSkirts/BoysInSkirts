@@ -34,12 +34,12 @@ Primary objectives:
 In-scope (MVP):
 
 - Headless CMS with user auth, JWT-based API, content pages (WYSIWYG or structured blocks), media library.
-- CMS content types: Page, Article, Static (terms/privacy), Hero configuration (which model/skirt to display).
-- Human model management: upload, metadata, preview image, simple pose selector.
-- Skirt assets: upload 3D files (glTF), CRUD, preview thumbnails; support for both pre-made 3D models and parametrically generated patterns.
+- CMS content types: Page with custom fields, Static pages (terms/privacy), Hero configuration (which model/skirt to display).
+- Model management: unified system for both human models and skirt assets with metadata, preview images, and categorization.
+- Model assets: upload 3D files (glTF), CRUD, preview thumbnails; support for both pre-made 3D models and parametrically generated patterns.
 - Main website (React + Three.js): landing page with hero VT, content pages, basic responsive UI components.
-- Admin panel (React): CMS UI, model/skirt management, content preview, basic analytics dashboard.
-- Basic user tracking (anonymous analytics events) with opt-out / cookie consent.
+- Admin panel (React): CMS UI, model management, content preview, privacy-focused analytics dashboard.
+- Privacy-first analytics: self-hosted, anonymous session tracking, event tracking (page views, VT interactions), cookie consent with opt-out, no personal data collection, IP anonymization.
 - Authentication for CMS/Admin with JWT and RBAC (Editor, Admin).
 - CI/CD and automated tests for critical paths.
 - All file and asset management is handled by the CMS and its REST APIs. No CDN or S3 is used; all uploads and downloads are managed by the backend.
@@ -76,7 +76,7 @@ Admin Browser <-> **CMS REST API** (auth required)
 - Auth: JWT; optionally integrate with OAuth2 for external logins (admins only).
 - CI/CD: GitHub Actions (build/test/containers), automated deployment to staging & prod.
 - Monitoring: Sentry for errors, Prometheus/Grafana for infra metrics, Cloud provider monitoring.
-- Analytics: Plausible (privacy-focused) or Matomo (self-host).
+- Analytics: Self-hosted privacy-first analytics built into the CMS (simplified GA4 alternative with anonymous session tracking, event tracking, and cookie consent management).
 - Optional: Node microservice for heavy 3D processing/skirt generation offline.
 
 Rationale: chosen stack balances familiarity, scalability, and the mature Java ecosystem for server side control of CMS data shapes and APIs.
@@ -89,29 +89,37 @@ Rationale: chosen stack balances familiarity, scalability, and the mature Java e
 
 - Authentication & RBAC:
   - Login (username/password), JWT token issuance, token refresh.
-  - Roles: Admin, Editor, Viewer.
+  - Roles: Admin, Editor.
 - Content types:
   - Content Blocks: (rich text, image, embed).
-  - Page: Static pages like privacy policy.
+  - Page: All pages including static pages like privacy policy.
   - **The landing page** layout is hardcoded, but the content can be fetched via REST APIs.
 - Custom fields:
   - Simplified ACF-like system for: text, textarea, rich text (Markdown), image, select, boolean, assets, nested groups.
-  - Ability to define page templates and which fields are editable.
+  - Ability to define page templates and which fields are editable via field definitions.
+  - Field instances attached to pages with metadata support.
 - Media library:
-  - Upload, automatic image resizing, thumbnails, metadata, reference counting.
-- Human models:
-  - CRUD, name, body type tags (slim, average, plus-size), skin tone tags, preview thumbnails, default pose.
-  - 3D model references (glTF/GLB) or baked preview images.
-- Skirt assets:
-  - CRUD, metadata (style, pattern parameters), upload glTF/GLB or SVG patterns if procedural.
-  - Preview thumbnails; mapping to skirt anchor points on human models.
+  - Upload, automatic image resizing, thumbnails, metadata, reference counting, alt text for accessibility.
+- Model management (unified for human models and skirt assets):
+  - CRUD, name, category (human_model or skirt_asset), file path to glTF/GLB.
+  - Metadata system using model_meta table for flexible attributes:
+    - Human models: body_type (slim, average, plus-size), skin_tone, tags, anchor_map (JSON), pose.
+    - Skirt assets: style, compatible_models (JSON array of model IDs), anchor (JSON for bone/offset/rotation), parameters_schema (JSON for procedural generation).
+  - Preview thumbnails via preview_image reference.
 - Skirt generator (see section 8).
 - API:
   - RESTful endpoints for all content with pagination, filtering, caching headers.
   - Public read endpoints without auth (for public site).
   - Admin endpoints behind JWT.
-- Audit & versioning:
-  - Basic page history and unpublished drafts; optional versioning for models/assets.
+- Versioning:
+  - Basic page drafts and publish workflow via status field (draft, published, archived).
+- Privacy-first analytics (self-hosted):
+  - Anonymous session tracking with generated session IDs (no cookies unless consent given).
+  - Event tracking: page views, VT interactions (model_switch, skirt_switch), engagement metrics.
+  - IP anonymization (store country only).
+  - Cookie consent management with opt-out capability.
+  - No personal data collection; no cross-site tracking.
+  - Aggregated metrics only in admin dashboard.
 - Webhooks:
   - On publish, trigger cache purge/CDN invalidation.
 
@@ -135,12 +143,18 @@ Rationale: chosen stack balances familiarity, scalability, and the mature Java e
 - Login + MFA optional.
 - Content editor:
   - WYSIWYG / structured editor for blocks, preview button (desktop + mobile).
-- Model & skirt management UI:
-  - Upload, preview, tag, and assign to hero presets.
+- Unified model management UI:
+  - Upload, preview, categorize (human_model or skirt_asset), add metadata.
+  - Tag and assign models to hero presets.
 - Publish workflow:
   - Draft, review, publish; preview as public.
-- Analytics dashboard:
-  - Top pages, VT engagements, anonymous events like "try-on interactions".
+- Privacy-focused analytics dashboard:
+  - Page view metrics (top pages, unique sessions, views over time).
+  - VT engagement metrics (model switches, skirt switches, interaction duration).
+  - Anonymous event aggregations only.
+  - Consent rate tracking.
+  - No personally identifiable information displayed.
+  - Country-level geographic data only.
 - Role management:
   - Invite users, assign roles.
 
@@ -184,19 +198,27 @@ Integration details:
 
 Entities:
 
-- User {id, username, email, role, hashed_password, created_at}
-- Page {id, title, slug, status, template, fields:json, author_id, published_at}
-- Article {id, ...}
-- Media {id, key, url, mime, width, height, sizes, created_at}
-- HumanModel {id, name, body_type, tags, glb_url, preview_image_id, anchor_map:json}
-- SkirtAsset {id, name, style, glb_url, preview_image_id, compatible_models:[ids], parameters_schema:json}
-- AuditLog {entity, entity_id, action, user_id, timestamp}
+- User {id, username, email, role, hashed_password, is_active, created_at, updated_at, last_login_at}
+- Page {id, title, slug, status, template, content, author_id, published_at, created_at, updated_at}
+- Field {id, parent_id, name, handle, type, description, created_at, updated_at}
+- PageField {id, page_id, field_id, field_name, field_handle, field_type}
+- PageFieldMeta {id, pf_id, meta_key, meta_value}
+- PageMeta {id, page_id, meta_key, meta_value}
+- File {id, name, file_path, mime_type, size, width, height, alt_text, uploaded_by, created_at}
+- Model {id, name, file_path, category (human_model|skirt_asset), preview_image_id, created_at, updated_at}
+- ModelMeta {id, model_id, meta_key, meta_value} — stores flexible attributes like body_type, style, anchor_map, compatible_models, etc.
+- AnalyticsSession {id, session_id, anonymous_id, started_at, last_active_at, user_agent, country, consent_given}
+- AnalyticsEvent {id, session_id, event_type (page_view|vt_interaction|model_switch|skirt_switch), page_path, page_title, event_data:json, created_at}
 
 API patterns:
 
 - /api/pages?slug=landing — public read
-- /api/human-models — public read (but limited metadata)
-- /api/admin/human-models — authenticated CRUD
+- /api/models?category=human_model — public read (limited metadata)
+- /api/models?category=skirt_asset — public read (limited metadata)
+- /api/admin/models — authenticated CRUD
+- /api/admin/analytics/sessions — authenticated read (aggregated data only)
+- /api/admin/analytics/events — authenticated read (aggregated data only)
+- /api/analytics/track — public POST for event tracking (respects consent)
 - /api/skirt-generator (POST parameters) — (optional) returns glTF or job id
 
 ---
@@ -214,11 +236,17 @@ Security:
 Privacy:
 
 - Minimal data collection — no personal data from public visitors unless they sign up.
-- Analytics: use privacy-first analytics, anonymize IPs, and provide cookie consent UI with opt-out.
-- For any tracking related to VT usage, use event aggregation and keep data anonymous (no device-level linkage without explicit consent).
-- Provide clear privacy policy explaining usage.
+- Self-hosted privacy-first analytics (simplified GA4 alternative):
+  - Anonymous session tracking using generated session IDs.
+  - IP anonymization: store country only, no full IP addresses retained.
+  - Cookie consent UI with clear opt-out capability.
+  - No third-party analytics services or data sharing.
+  - No cross-site tracking or fingerprinting.
+- For VT usage tracking: aggregate anonymous events (model switches, skirt switches, interaction duration) without device-level linkage.
+- Admin dashboard shows only aggregated metrics, no individual user paths or identification.
+- Provide clear privacy policy explaining what data is collected and how it's used.
 
-Compliance: design with GDPR/CCPA considerations — DSAR handling process if user data collected.
+Compliance: design with GDPR/CCPA considerations — DSAR handling process if user data collected. Right to be forgotten for users who create accounts.
 
 ## 11. Accessibility
 
@@ -303,16 +331,16 @@ Total initial: ~3–4 months to MVP depending on team size.
 - Risk: Admin/editor UX complexity.
   - Mitigation: user-centered design sessions and simple templates for editors.
 - Risk: Privacy/consent mistakes with tracking VT usage.
-  - Mitigation: use privacy-first analytics, opt-in for any non-anonymous telemetry.
+  - Mitigation: self-hosted analytics with strict privacy controls, anonymous-by-default tracking, clear opt-out mechanism.
 
 ## 18. Acceptance criteria (MVP)
 
-- CMS can create/edit/publish pages and media, and editors can manage human models and skirt assets.
-- Landing page displays hero 3D VT with at least 3 models and 4 skirts; controls allow swapping model/skirt.
+- CMS can create/edit/publish pages and media, and editors can manage models (both human models and skirt assets) via unified interface.
+- Landing page displays hero 3D VT with at least 3 human models and 4 skirts; controls allow swapping model/skirt.
 - Public APIs deliver content within 200ms median response (staging).
 - Admin user can log in, create a draft, preview, and publish a page.
 - Accessibility: WCAG AA checks for published pages and controls.
-- Privacy: cookie banner present; analytics respect opt-out.
+- Privacy: cookie consent banner present; self-hosted analytics track only anonymous events; admin dashboard shows aggregated metrics only; no personal data collection.
 
 ## 19. Rough cost & effort estimate (high level)
 
@@ -339,22 +367,48 @@ We can produce a more detailed sprint plan and cost estimate once team compositi
 Appendix A — Example API endpoints (MVP)
 
 - GET /api/pages/:slug
-- GET /api/articles?tag=gender-equity
-- GET /api/human-models
-- GET /api/skirt-assets
+- GET /api/pages?status=published
+- GET /api/models?category=human_model
+- GET /api/models?category=skirt_asset
 - POST /api/admin/login
-- GET /api/admin/human-models
-- POST /api/admin/skirt-assets
+- GET /api/admin/models
+- POST /api/admin/models
+- PUT /api/admin/models/:id
+- DELETE /api/admin/models/:id
+- GET /api/admin/analytics/sessions?from=2025-01-01&to=2025-01-31
+- GET /api/admin/analytics/events?type=vt_interaction
+- POST /api/analytics/track
 - POST /api/skirt-generator (Phase 2)
 
-Appendix B — Example skirt asset metadata (JSON)
+Appendix B — Example model metadata (stored in model_meta table)
+
+Human Model:
+- model_id: 1
+- meta entries:
+  - body_type: "average"
+  - skin_tone: "medium"
+  - tags: ["default", "featured"]
+  - anchor_map: {"hips": {"bone": "hips", "offset": [0, 0, 0]}}
+  - pose: "standing"
+
+Skirt Asset:
+- model_id: 2
+- meta entries:
+  - style: "A-line"
+  - compatible_models: [1, 3, 5]
+  - anchor: {"bone": "hips", "offset": [0, -0.1, 0], "rotation": [0, 0, 0]}
+  - parameters_schema: null
+
+Appendix C — Example analytics event (JSON)
 {
-  "id": "skirt-001",
-  "name": "A-line knee",
-  "style": "A-line",
-  "glb_url": "<https://cdn.example.com/skirts/skirt-001.glb>",
-  "preview_image": "<https://cdn.example.com/skirts/skirt-001.jpg>",
-  "compatible_body_types": ["slim","average"],
-  "anchor": { "bone": "hips", "offset": [0, -0.1, 0], "rotation": [0,0,0] },
-  "parameters_schema": null
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
+  "event_type": "model_switch",
+  "page_path": "/",
+  "page_title": "Boys in Skirts - Home",
+  "event_data": {
+    "from_model_id": 1,
+    "to_model_id": 3,
+    "interaction_method": "click"
+  },
+  "created_at": "2025-10-23T14:30:00Z"
 }
