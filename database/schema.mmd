@@ -1,0 +1,114 @@
+erDiagram
+    %% Note: All tables include standard audit fields (not shown):
+    %% - datetime CreatedAt
+    %% - int CreatedBy FK (references user)
+    %% - datetime UpdatedAt
+    %% - int UpdatedBy FK (references user)
+    %% - boolean Disabled
+
+    field {
+        int ID PK
+        int ParentID
+        varchar Name
+        varchar Handle
+        enum Type         
+        %%  plain_text, rich_text, link, assets
+        longtext Description
+    }
+    page {
+        int ID PK
+        varchar Title
+        varchar Slug
+        longtext Content
+        int AuthorID FK
+        enum Status
+        %% draft, published, archived
+        varchar Template
+        datetime PublishedAt
+    }
+    model {
+        int ID PK
+        varchar Name
+        varchar FilePath
+        enum Category
+        %% human_model, skirt_asset
+        int PreviewImageID FK
+    }
+    model_meta {
+        int ID PK
+        int ModelID FK
+        varchar MetaKey
+        longtext MetaValue
+    }
+    user {
+        int ID PK
+        varchar Username
+        varchar Email
+        varchar Password
+        enum Role
+        %% admin, editor
+        boolean IsActive
+        datetime LastLoginAt
+    }
+    page_field {
+        int ID PK
+        int PageID FK
+        int FieldID FK
+        varchar FieldName
+        varchar FieldHandle
+        enum FieldType    
+        %% plain_text, rich_text, link, assets
+    }
+    page_field_meta {
+        int ID PK
+        int PFID FK
+        varchar MetaKey
+        longtext MetaValue
+    }
+    page_meta {
+        int ID PK
+        int PageID FK
+        varchar MetaKey
+        longtext MetaValue
+    }
+    file {
+        int ID PK
+        varchar Name
+        varchar FilePath
+        varchar MimeType
+        int Size
+        int Width
+        int Height
+        varchar AltText
+        int UploadedBy FK
+    }
+    analytics_session {
+        int ID PK
+        varchar SessionID
+        varchar AnonymousID
+        datetime StartedAt
+        datetime LastActiveAt
+        varchar UserAgent
+        varchar Country
+        boolean ConsentGiven
+    }
+    analytics_event {
+        int ID PK
+        int SessionID FK
+        varchar EventType
+        %% page_view, vt_interaction, model_switch, skirt_switch
+        varchar PagePath
+        varchar PageTitle
+        json EventData
+        datetime Timestamp
+    }
+
+    model ||--o{ model_meta : ""
+    model ||--o| file : "preview"
+    page ||--o{ page_field : ""
+    field ||--o{ page_field : ""
+    page ||--o| user : "author"
+    page ||--o{ page_meta : ""
+    page_field ||--o{ page_field_meta : ""
+    file ||--o| user : "uploader"
+    analytics_session ||--o{ analytics_event : ""
