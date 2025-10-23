@@ -54,6 +54,7 @@ In-scope (MVP):
 - Basic user tracking (anonymous analytics events) with opt-out / cookie consent.
 - Authentication for CMS/Admin with JWT and RBAC (Editor, Admin).
 - CI/CD and automated tests for critical paths.
+- **All file and asset management is handled by the CMS and its REST APIs. No CDN or S3 is used; all uploads and downloads are managed by the backend.**
 
 Out-of-scope (for MVP):
 - Full ecommerce, payment processing.
@@ -66,26 +67,26 @@ Out-of-scope (for MVP):
 
 ## 5. High-level architecture
 
-- Headless CMS (Spring Boot, MySQL) — exposes RESTful JSON APIs for content, models, assets.
+- Headless CMS (Spring Boot, MySQL) — exposes RESTful JSON APIs for content, models, assets, and serves all uploaded files directly.
 - Main Website (React + TypeScript) — client-side app using Tailwind CSS and Material UI for components; Three.js for 3D VT.
 - Admin Panel (React + TypeScript) — SPA that consumes CMS APIs; shares UI library.
-- Storage: MySQL for structured data; S3-compatible object storage for media and 3D assets.
-- CDN: Serve public assets and built frontends via CDN (CloudFront, Cloudflare).
+- Storage: MySQL for structured data; **all media and 3D assets are stored and served by the CMS backend (no S3/CDN).**
+- ~~CDN: Serve public assets and built frontends via CDN (CloudFront, Cloudflare).~~
 - Auth: JWT issued by CMS for admin panel and internal API auth. Admin UI protected by RBAC.
 - Analytics: Privacy-first analytics (Plausible or self-hosted Matomo) + optional server-side event tracking.
 - Infrastructure: Dockerized services, Kubernetes or managed container service (ECS/Fargate), Terraform for infra as code (optional).
 
 Diagram (conceptual):
-Public Browser <-> CDN -> React app (Three.js) <-> CMS REST API (Spring Boot) -> MySQL, S3
-Admin Browser <-> CDN -> Admin React app <-> CMS REST API (auth required)
+Public Browser <-> **CMS REST API (Spring Boot, serves all content and assets)** -> MySQL, local file storage
+Admin Browser <-> **CMS REST API** (auth required)
 
 ---
 
 ## 6. Tech stack (recommended)
 
 - Backend / CMS: Spring Boot (Java 17+), Spring Security (JWT), Spring Data JPA, MySQL / Aurora MySQL.
-- Frontend: React + TypeScript, Vite or Next.js (if SSR desired), Tailwind CSS, Material UI (component lib), Three.js / react-three-fiber for 3D rendering.
-- Asset storage & CDN: AWS S3 + CloudFront (or equivalent).
+- Frontend: React + TypeScript + Vite, Tailwind CSS, Material UI (component lib), Three.js / react-three-fiber for 3D rendering.
+- **Asset storage & serving: All files managed and served by the CMS backend (no S3/CDN).**
 - Auth: JWT; optionally integrate with OAuth2 for external logins (admins only).
 - CI/CD: GitHub Actions (build/test/containers), automated deployment to staging & prod.
 - Monitoring: Sentry for errors, Prometheus/Grafana for infra metrics, Cloud provider monitoring.
@@ -111,6 +112,7 @@ Rationale: chosen stack balances familiarity, scalability, and the mature Java e
   - Ability to define page templates and which fields are editable.
 - Media library:
   - Upload, automatic image resizing, thumbnails, metadata, reference counting.
+  - **All media and asset files are uploaded to and served from the CMS backend.**
 - Human models:
   - CRUD, name, body type tags (slim, average, plus-size), skin tone tags, preview thumbnails, default pose.
   - 3D model references (glTF/GLB) or baked preview images.
@@ -237,19 +239,10 @@ Compliance: design with GDPR/CCPA considerations — DSAR handling process if us
 
 - Lazy-load 3D assets and defer heavy scripts until after hero content visible or on user interaction.
 - Use compressed glTF (DRACO) and LODs.
-- Use HTTP/2 or HTTP/3 via CDN.
-- Cache returned API content with ETag/Cache-Control and CDN edge caching.
+- ~~Use HTTP/2 or HTTP/3 via CDN.~~
+- ~~Cache returned API content with ETag/Cache-Control and CDN edge caching.~~
+- **Optimize backend file serving for performance (HTTP/2 if possible, efficient file streaming).**
 - Monitor Lighthouse and set budget (bundle size targets).
-
----
-
-## 13. Testing strategy
-
-- Unit tests: backend (Spring Boot), frontend components.
-- Integration tests: API contract tests, end-to-end tests (Playwright or Cypress) for public flows and admin publish workflow.
-- Visual regression tests for key pages and VT hero fallback.
-- Accessibility testing using axe-core integrated into CI.
-- Performance regression checks (bundle sizes, Lighthouse snapshots).
 
 ---
 
@@ -259,7 +252,7 @@ Compliance: design with GDPR/CCPA considerations — DSAR handling process if us
 - Containerize backend and optional asset-processing services.
 - Recommended hosting: managed Kubernetes (EKS/GKE/AKS) or ECS Fargate for smaller ops footprint.
 - Use RDS / managed MySQL for database.
-- S3 or equivalent for assets + CloudFront/Cloudflare CDN.
+- **All assets and media are stored and served by the CMS backend; no S3 or CDN.**
 - CI/CD: GitHub Actions — build, test, push images, deploy to staging then production with controlled rollout.
 - Backups: DB daily, assets replicated.
 
@@ -378,6 +371,11 @@ Appendix B — Example skirt asset metadata (JSON)
 ---
 
 If you'd like, I can:
+- Turn this into an actionable sprint backlog with epics, user stories, and acceptance criteria.
+- Produce a minimal API spec (OpenAPI) for the CMS.
+- Draft UI mockups for the hero VT and the admin model/skirt manager.
+
+Which of these would you like
 - Turn this into an actionable sprint backlog with epics, user stories, and acceptance criteria.
 - Produce a minimal API spec (OpenAPI) for the CMS.
 - Draft UI mockups for the hero VT and the admin model/skirt manager.
