@@ -1,3 +1,5 @@
+![Logo](./assets/logo.png)
+
 # BoysInSkirts.org — Project Information
 
 ## 1. Executive summary
