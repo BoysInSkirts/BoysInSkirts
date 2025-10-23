@@ -1,4 +1,11 @@
 erDiagram
+    %% Note: All tables include standard audit fields (not shown):
+    %% - datetime CreatedAt
+    %% - int CreatedBy FK (references user)
+    %% - datetime UpdatedAt
+    %% - int UpdatedBy FK (references user)
+    %% - boolean Disabled
+
     field {
         int ID PK
         int ParentID
@@ -7,8 +14,6 @@ erDiagram
         enum Type         
         %%  plain_text, rich_text, link, assets
         longtext Description
-        datetime CreatedAt
-        datetime UpdatedAt
     }
     page {
         int ID PK
@@ -20,8 +25,6 @@ erDiagram
         %% draft, published, archived
         varchar Template
         datetime PublishedAt
-        datetime CreatedAt
-        datetime UpdatedAt
     }
     model {
         int ID PK
@@ -30,8 +33,6 @@ erDiagram
         enum Category
         %% human_model, skirt_asset
         int PreviewImageID FK
-        datetime CreatedAt
-        datetime UpdatedAt
     }
     model_meta {
         int ID PK
@@ -47,8 +48,6 @@ erDiagram
         enum Role
         %% admin, editor
         boolean IsActive
-        datetime CreatedAt
-        datetime UpdatedAt
         datetime LastLoginAt
     }
     page_field {
@@ -82,7 +81,6 @@ erDiagram
         int Height
         varchar AltText
         int UploadedBy FK
-        datetime CreatedAt
     }
     analytics_session {
         int ID PK
@@ -102,7 +100,7 @@ erDiagram
         varchar PagePath
         varchar PageTitle
         json EventData
-        datetime CreatedAt
+        datetime Timestamp
     }
 
     model ||--o{ model_meta : ""
